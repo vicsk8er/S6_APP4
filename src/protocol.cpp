@@ -376,9 +376,21 @@ ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx)
                 resetAfterLog = true;
                 break;
 
-            case CommunicationType::Nack:// TODO: Définir behavior NACK
-            default:
+            case CommunicationType::Nack:
+                uint8_t packetToRetransmit = frame.heading.parameter;
+                
+                if (protocolRetransmit(packetToRetransmit))
+                {                    setError(ctx, ErrorCode::COMM_OK);
+                    result = ProtocolResult::ACCEPT;
+                }
+                else
+                {
+                    setError(ctx, ErrorCode::ERR_VALUE_FIELD);
+                    result = ProtocolResult::REJECT;
+                }
+                break;
 
+            default:
                 setError(ctx, ErrorCode::ERR_TYPE);
                 result = ProtocolResult::REJECT;
                 break;
