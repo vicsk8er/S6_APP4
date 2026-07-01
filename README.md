@@ -123,6 +123,8 @@ Parameter       : 0
 CRC             : 0xFC02
 Expected frame  : 3
 Expected total  : 3
+Error           : COMM_OK
+Result          : ACCEPT
 ```
 
 ## 4. Traitement du résultat (`rx_task.cpp`)
