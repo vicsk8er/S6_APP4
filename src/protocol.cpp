@@ -463,6 +463,90 @@ ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx)
     return result;
 }
 
+// ========== PERFORMANCE TEST ==========
+// Measure maximum throughput on ESP32 data link layer
+void performanceTest()
+{
+    printf("\n\n========== PERFORMANCE TEST ==========\n");
+    printf("Measuring ESP32 data link layer throughput\n");
+    printf("(Abstraction of RF layer limitations)\n\n");
+    
+    // Frame overhead: 10 bytes per frame (preamble + start + header(4) + crc + end)
+    const uint16_t frameOverhead = 10;
+    
+    // Test different payload sizes
+    uint8_t payloadSizes[] = {1, 10, 20, 40, 80};
+    uint32_t totalTime = 0;
+    uint32_t totalDataBytes = 0;
+    uint8_t numTests = sizeof(payloadSizes) / sizeof(payloadSizes[0]);
+    
+    printf("Testing %u payload sizes:\n", numTests);
+    printf("%-15s %-20s %-20s %-20s\n", "Payload", "Frame Size", "Time (ms)", "Throughput");
+    printf("%-15s %-20s %-20s %-20s\n", "-------", "----------", "---------", "----------");
+    
+    for (uint8_t i = 0; i < numTests; i++)
+    {
+        uint8_t payloadSize = payloadSizes[i];
+        
+        // Total frame size: START(10) + DATA(10 + payload) + END(10)
+        uint16_t totalFrameSize = frameOverhead + (frameOverhead + payloadSize) + frameOverhead;
+        totalDataBytes += payloadSize;  // Count only payload bytes
+        
+        // Create test data
+        uint8_t testData[80];
+        for (uint8_t j = 0; j < payloadSize; j++)
+        {
+            testData[j] = (uint8_t)(j + i);
+        }
+        
+        // Measure transmission time
+        uint32_t startTime = millis();
+        protocolSendMessage(testData, payloadSize, false);
+        uint32_t endTime = millis();
+        
+        uint32_t transmissionTime = endTime - startTime;
+        totalTime += transmissionTime;
+        
+        // Calculate throughput
+        // Serial transmission @ 115200 baud = 115200 bits/sec = 14400 bytes/sec
+        // But we measure actual ESP32 processing time
+        float throughputBytes = (transmissionTime > 0) ? 
+            (float)(payloadSize * 1000) / transmissionTime : 0;
+        float throughputKbps = throughputBytes * 8 / 1000;  // Convert to Kbps
+        
+        printf("%-15u %-20u %-20lu %-20.2f Kbps\n",
+            payloadSize, totalFrameSize, transmissionTime, throughputKbps);
+        
+        delay(100);  // Small delay between tests
+    }
+    
+    // Calculate and display average throughput
+    printf("\n========== RESULTS ==========\n");
+    printf("Total tests: %u\n", numTests);
+    printf("Total time: %lu ms\n", totalTime);
+    printf("Total payload data: %lu bytes\n", totalDataBytes);
+    
+    if (totalTime > 0)
+    {
+        float avgThroughputBytes = (float)(totalDataBytes * 1000) / totalTime;
+        float avgThroughputKbps = avgThroughputBytes * 8 / 1000;
+        float avgThroughputMbps = avgThroughputKbps / 1000;
+        
+        printf("\nAverage Throughput:\n");
+        printf("  %.2f bytes/sec\n", avgThroughputBytes);
+        printf("  %.2f Kbps (Kilobits/sec)\n", avgThroughputKbps);
+        printf("  %.3f Mbps (Megabits/sec)\n", avgThroughputMbps);
+        
+        // Theoretical maximum with 115200 baud UART
+        printf("\nComparison with UART capacity:\n");
+        printf("  UART max capacity: 115200 bps = 14400 bytes/sec\n");
+        printf("  ESP32 data link layer efficiency: %.1f%%\n", 
+            (avgThroughputBytes / 14400) * 100);
+    }
+    
+    printf("\n=====================================\n\n");
+}
+
 
 
 

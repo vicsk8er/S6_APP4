@@ -15,5 +15,6 @@ enum class ProtocolResult
 bool protocolSendMessage(const uint8_t* data, uint16_t length, bool inject_error); 
 bool protocolRetransmit(uint8_t sequence); // NACK
 ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx); // Réception
+void performanceTest(); // Throughput measurement
 
 #endif
