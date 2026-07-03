@@ -4,6 +4,7 @@
 #include "receive_frame.h"
 #include "send_frame.h"
 #include "utils/frame_buffer.h"
+#include "manchester/manchester_driver.h"
 #include <stdio.h>
 
 static ReceptionContext rxContext;
@@ -14,9 +15,11 @@ void uartRxTask(void *pvParameters)
 
     Frame frame;
 
+    resetReceptionState(rxContext);
+
     while (true)
     {
-        if (!receivedFrame(frame, rxContext, Serial1))
+        if (!receivedFrame(frame, rxContext))
         {
             continue;
         }
@@ -56,5 +59,5 @@ void sendNackFrame(uint8_t currentFrame)
     nackFrame.CRC = crc_calculator(nackFrame);
     nackFrame.end = 0x7E;
 
-    sendFrame(nackFrame, Serial1);
+    sendFrame(nackFrame);
 }

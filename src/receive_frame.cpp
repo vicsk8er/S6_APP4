@@ -1,32 +1,27 @@
 #include "receive_frame.h"
 
+#include "manchester/manchester_driver.h"
 #include "utils/CRC_calculator.h"
 #include <cstring>
 
 static ReceptionContext rxContext;
 
-static bool readByteBlocking(HardwareSerial &uart, uint8_t &value)
+static bool readByteBlocking(uint8_t &value)
 {
     TickType_t start = xTaskGetTickCount();
 
-    while (uart.available() == 0)
+    while (true)
     {
         if ((xTaskGetTickCount() - start) > pdMS_TO_TICKS(1000))
         {
             return false;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(10));
+        if (manchesterReceiveByte(value, pdMS_TO_TICKS(10)))
+        {
+            return true;
+        }
     }
-
-    int readValue = uart.read();
-    if (readValue < 0)
-    {
-        return false;
-    }
-
-    value = (uint8_t)readValue;
-    return true;
 }
 
 void resetReceptionState(ReceptionContext &context)
@@ -37,47 +32,58 @@ void resetReceptionState(ReceptionContext &context)
     context.error = ErrorCode::COMM_OK;
 }
 
-bool receivedFrame(Frame &frame, ReceptionContext &context, HardwareSerial &uart)
+static bool syncToFrameStart(uint8_t &preamble, uint8_t &start)
+{
+    while (true)
+    {
+        if (!readByteBlocking(preamble))
+        {
+            return false;
+        }
+
+        if (preamble != preamble_value)
+        {
+            continue;
+        }
+
+        if (!readByteBlocking(start))
+        {
+            return false;
+        }
+
+        if (start == start_value)
+        {
+            return true;
+        }
+    }
+}
+
+bool receivedFrame(Frame &frame, ReceptionContext &context)
 {
 
     uint8_t byte = 0x00;
 
-    do
-    {
-        if (!readByteBlocking(uart, byte))
-        {
-            return false;
-        }
-    } while (byte != preamble_value);
-
-    frame.preamble = byte;
-
-    do
-    {
-        if (!readByteBlocking(uart, byte))
-        {
-            return false;
-        }
-    } while (byte != start_value);
-
-    frame.start = byte;
-
-    if (!readByteBlocking(uart, frame.heading.type))
+    if (!syncToFrameStart(frame.preamble, frame.start))
     {
         return false;
     }
 
-    if (!readByteBlocking(uart, frame.heading.sequenceNumber))
+    if (!readByteBlocking(frame.heading.type))
     {
         return false;
     }
 
-    if (!readByteBlocking(uart, frame.heading.payloadLength))
+    if (!readByteBlocking(frame.heading.sequenceNumber))
     {
         return false;
     }
 
-    if (!readByteBlocking(uart, frame.heading.parameter))
+    if (!readByteBlocking(frame.heading.payloadLength))
+    {
+        return false;
+    }
+
+    if (!readByteBlocking(frame.heading.parameter))
     {
         return false;
     }
@@ -93,25 +99,25 @@ bool receivedFrame(Frame &frame, ReceptionContext &context, HardwareSerial &uart
 
     for (uint8_t index = 0; index < payloadLength; ++index)
     {
-        if (!readByteBlocking(uart, frame.payload[index]))
+        if (!readByteBlocking(frame.payload[index]))
         {
             return false;
         }
     }
 
-    if (!readByteBlocking(uart, byte))
+    if (!readByteBlocking(byte))
     {
         return false;
     }
     frame.CRC = byte;
 
-    if (!readByteBlocking(uart, byte))
+    if (!readByteBlocking(byte))
     {
         return false;
     }
     frame.CRC |= ((uint16_t)byte) << 8;
 
-    if (!readByteBlocking(uart, frame.end))
+    if (!readByteBlocking(frame.end))
     {
         return false;
     }

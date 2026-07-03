@@ -1,4 +1,5 @@
 #include "send_frame.h"
+#include "manchester/manchester_driver.h"
 #include "utils/CRC_calculator.h"
 #include "utils/error_injector.h"
 #include <cstring>
@@ -70,22 +71,24 @@
 // }
 
 
-bool sendFrame(const Frame &frame, HardwareSerial &uart)
+bool sendFrame(const Frame &frame)
 {
     if (frame.heading.payloadLength > MAX_PAYLOAD_BYTE_SIZE)
     {
         return false;
     }
 
-    uart.write(frame.preamble);
-    uart.write(frame.start);
-    uart.write(frame.heading.type);
-    uart.write(frame.heading.sequenceNumber);
-    uart.write(frame.heading.payloadLength);
-    uart.write(frame.heading.parameter);
-    uart.write(frame.payload, frame.heading.payloadLength);
-    uart.write(static_cast<uint8_t>(frame.CRC & 0xFFU));
-    uart.write(static_cast<uint8_t>((frame.CRC >> 8) & 0xFFU));
-    uart.write(frame.end);
+    if (!manchesterSendBytes(&frame.preamble, 1U)) return false;
+    if (!manchesterSendBytes(&frame.start, 1U)) return false;
+    if (!manchesterSendBytes(&frame.heading.type, 1U)) return false;
+    if (!manchesterSendBytes(&frame.heading.sequenceNumber, 1U)) return false;
+    if (!manchesterSendBytes(&frame.heading.payloadLength, 1U)) return false;
+    if (!manchesterSendBytes(&frame.heading.parameter, 1U)) return false;
+    if (!manchesterSendBytes(frame.payload, frame.heading.payloadLength)) return false;
+    const uint8_t crcLow = static_cast<uint8_t>(frame.CRC & 0xFFU);
+    const uint8_t crcHigh = static_cast<uint8_t>((frame.CRC >> 8) & 0xFFU);
+    if (!manchesterSendBytes(&crcLow, 1U)) return false;
+    if (!manchesterSendBytes(&crcHigh, 1U)) return false;
+    if (!manchesterSendBytes(&frame.end, 1U)) return false;
     return true;
 }

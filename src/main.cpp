@@ -4,6 +4,7 @@
 #include "tx_tasks.h"
 #include "protocol.h"
 #include "utils/frame_buffer.h"
+#include "manchester/manchester_driver.h"
 
 #define BUTTON_PIN 0
 
@@ -33,13 +34,13 @@ void setup()
     
     initFrameBuffer();
 
-    Serial1.begin(115200, SERIAL_8N1, 14, 12); // Rx = 14, Tx = 12
+    manchesterBegin(MANCHESTER_RX_PIN, MANCHESTER_TX_PIN, MANCHESTER_BIT_RATE);
 
     //pinMode(BUTTON_PIN, INPUT_PULLDOWN);
 
     xTaskCreate(
         uartRxTask,
-        "UART_RX",
+        "MANCHESTER_RX",
         4096,
         nullptr,
         2,
@@ -47,7 +48,7 @@ void setup()
 
     xTaskCreate(
         uartTxTask,
-        "UART_TX",
+        "MANCHESTER_TX",
         4096,
         nullptr,
         2,

@@ -15,8 +15,6 @@ static void sendButtonMessage()
         return;
     }
 
-	// printf("Test de truss\n");
-	// printf("-------------\n");
 	printf("send message\n");
     protocolSendMessage(reinterpret_cast<const uint8_t *>(message), length, false);
 }
@@ -31,7 +29,7 @@ static void transmitQueuedFrames()
 	Frame frame;
 	while (xQueueReceive(TxPendingQueue, &frame, 0) == pdTRUE)
 	{
-		sendFrame(frame, Serial1);
+		sendFrame(frame);
 	}
 }
 

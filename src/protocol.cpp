@@ -5,6 +5,7 @@
 #include "utils/error_code.h"
 #include <math.h>
 #include <cstring>
+#include <Arduino.h>
 
 static uint8_t txSequence = 0;
 
