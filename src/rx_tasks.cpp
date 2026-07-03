@@ -26,7 +26,11 @@ void uartRxTask(void *pvParameters)
         switch (result)
         {
             case ProtocolResult::ACCEPT:
-                storeFrame(frame);
+                // Store only DATA frames, not START/END/NACK
+                if (frame.heading.type == 0x02)  // DATA frame
+                {
+                    storeFrame(frame);
+                }
                 break;
 
             case ProtocolResult::NACK:

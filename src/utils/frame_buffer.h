@@ -5,17 +5,14 @@
 #include "freertos/queue.h"
 
 #define MAX_FRAMES 128
-// struct FrameBuffer
-// {
-//     Frame frames[MAX_FRAMES];
-//     uint8_t writeIndex = 0;
-//     uint8_t readIndex = 0;
-//     uint8_t count = 0;
-// };
 
-// void storeFrame(FrameBuffer &buf, const Frame &frame);
-// bool getFrame(FrameBuffer &buf, uint8_t seq, Frame &frame);
-
+// Structure pour stocker une frame avec ses métadonnées
+struct FrameWithMetadata
+{
+    Frame frame;
+    uint32_t timestamp;  // Timestamp en millisecondes
+    uint32_t frameNumber; // Numéro séquentiel de la frame
+};
 
 extern QueueHandle_t RxFrameQueue;
 extern QueueHandle_t TxHistoryQueue;//sert au retransmission (quand il y a un NACK)
@@ -26,6 +23,10 @@ void initFrameBuffer();
 bool storeFrame(const Frame &frame);
 
 bool getFrame(Frame &frame);
+
+void displayReceivedFrames();
+
+void clearRxQueue();
 
 
 #endif

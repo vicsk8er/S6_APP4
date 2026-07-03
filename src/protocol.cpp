@@ -218,6 +218,16 @@ bool protocolSendMessage(const uint8_t* data, uint16_t length, bool inject_error
         (length + MAX_PAYLOAD_BYTE_SIZE - 1)
         / MAX_PAYLOAD_BYTE_SIZE;
     totalPackets += 2; // Car il y a un start et un end
+    
+    printf("\n========== TX START ==========\n");
+    printf("Sending %u packets total:\n", totalPackets);
+    printf("  1x START\n  %u x DATA\n  1x END\n", totalPackets - 2);
+    if (inject_error)
+    {
+        printf("  [ERROR INJECTION ENABLED]\n");
+    }
+    printf("============================\n\n");
+    
     if (!enqueueTxFrame(buildStartFrame(totalPackets, false)))
     {
         return false;
@@ -232,7 +242,17 @@ bool protocolSendMessage(const uint8_t* data, uint16_t length, bool inject_error
             fmin(MAX_PAYLOAD_BYTE_SIZE,
                 length - offset);
 
-        bool mustInject = inject_error && !injected && (random(0, totalPackets == 0 ? 1 : totalPackets) == 0); // a valider
+        //bool mustInject = inject_error && !injected && (random(0, totalPackets == 0 ? 1 : totalPackets) == 0); // a valider
+        bool mustInject = inject_error && !injected;
+
+        if (mustInject)
+        {
+            printf("[TX DATA #%u] Sending with ERROR INJECTION (corrupted CRC)\n", txSequence);
+        }
+        else
+        {
+            printf("[TX DATA #%u] Sending %u bytes (normal)\n", txSequence, currentSize);
+        }
 
         if (!enqueueTxFrame(
                 buildDataFrame(
@@ -253,6 +273,8 @@ bool protocolSendMessage(const uint8_t* data, uint16_t length, bool inject_error
     {
         return false;
     }
+
+    printf("[TX END] Transmission complete\n\n");
 
     return true;
 }
@@ -278,6 +300,8 @@ bool protocolRetransmit(uint8_t sequence)
         if (!found && frame.heading.sequenceNumber == sequence)
         {
             found = true;
+            // Recalculate CRC for clean retransmission
+            frame.CRC = crc_calculator(frame);
             xQueueSend(TxPendingQueue, &frame, 0);
             xQueueSend(tempQueue, &frame, 0);
             continue;
@@ -319,6 +343,12 @@ ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx)
                     break;
                 }
 
+                printf("\n========== RX INITIALIZATION ==========");
+                printf("\n[RX START] Session initialized");
+                printf("\n  Total packets expected: %u", frame.heading.parameter);
+                printf("\n  Next expected frame: 1");
+                printf("\n======================================\n");
+
                 resetReceptionState(ctx);
                 ctx.receptionStarted = true;
                 ctx.expectedTotal = frame.heading.parameter;
@@ -338,11 +368,19 @@ ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx)
 
                 if (frame.heading.sequenceNumber != ctx.currentFrame)
                 {
+                    // ERREUR DE SÉQUENCE - Génère un NACK
+                    printf("\n[RX ERROR] DATA frame sequence mismatch!\n");
+                    printf("  Expected: %u | Received: %u\n", ctx.currentFrame, frame.heading.sequenceNumber);
+                    printf("  -> Sending NACK for frame %u\n\n", ctx.currentFrame);
+                    
                     setError(ctx, ErrorCode::ERR_SEQUENCE);
                     result = ProtocolResult::NACK;
                     break;
                 }
 
+                printf("[RX OK] DATA frame #%u accepted (payload: %u bytes)\n", 
+                    frame.heading.sequenceNumber, frame.heading.payloadLength);
+                
                 ctx.currentFrame++;
                 result = ProtocolResult::ACCEPT;
                 break;
@@ -377,18 +415,25 @@ ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx)
                 break;
 
             case CommunicationType::Nack:
+            {
                 uint8_t packetToRetransmit = frame.heading.parameter;
                 
+                printf("\n[TX] NACK received - Retransmitting frame #%u\n", packetToRetransmit);
+                
                 if (protocolRetransmit(packetToRetransmit))
-                {                    setError(ctx, ErrorCode::COMM_OK);
+                {                    
+                    printf("[TX OK] Frame #%u found in history and re-queued\n\n", packetToRetransmit);
+                    setError(ctx, ErrorCode::COMM_OK);
                     result = ProtocolResult::ACCEPT;
                 }
                 else
                 {
+                    printf("[TX ERROR] Frame #%u NOT found in history!\n\n", packetToRetransmit);
                     setError(ctx, ErrorCode::ERR_VALUE_FIELD);
                     result = ProtocolResult::REJECT;
                 }
                 break;
+            }
 
             default:
                 setError(ctx, ErrorCode::ERR_TYPE);
@@ -413,7 +458,7 @@ ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx)
     if (resetAfterLog)
     {
         resetReceptionState(ctx);
-    }
+    } 
 
     return result;
 }

@@ -35,6 +35,8 @@ static void transmitQueuedFrames()
 	}
 }
 
+extern volatile uint8_t buttonTrigger;  // 0 = menu, 1 = button
+
 void uartTxTask(void *pvParameters)
 {
 	(void)pvParameters;
@@ -42,7 +44,13 @@ void uartTxTask(void *pvParameters)
 	while (true)
 	{
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-		sendButtonMessage();
+		
+		// Appeler sendButtonMessage() seulement si c'est le bouton qui a déclenché
+		if (buttonTrigger == 1)
+		{
+			sendButtonMessage();
+		}
+		
 		transmitQueuedFrames();
 	}
 }
