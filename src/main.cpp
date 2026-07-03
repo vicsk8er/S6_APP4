@@ -25,12 +25,15 @@ void IRAM_ATTR buttonISR()
 void setup()
 {
     Serial.begin(115200);
-    delay(1000);  // Wait for serial monitor
+    while (!Serial)
+    {
+    }
+    delay(1000); // Wait for Serial to initialize
     Serial.println("\n=== ESP32 Loopback Test ===\n");
     
     initFrameBuffer();
 
-    Serial1.begin(115200, SERIAL_8N1, 4, 5); // Rx = 4, Tx = 5
+    Serial1.begin(115200, SERIAL_8N1, 14, 12); // Rx = 14, Tx = 12
 
     //pinMode(BUTTON_PIN, INPUT_PULLDOWN);
 
