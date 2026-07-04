@@ -4,7 +4,6 @@
 #include "receive_frame.h"
 #include "send_frame.h"
 #include "utils/frame_buffer.h"
-#include "manchester/manchester_driver.h"
 #include <stdio.h>
 
 static ReceptionContext rxContext;
