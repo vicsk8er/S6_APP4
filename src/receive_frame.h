@@ -2,7 +2,6 @@
 #define RECEIVE_FRAME_H_
 
 #include <stdint.h>
-
 #include "utils/config.h"
 #include "utils/error_code.h"
 
@@ -15,10 +14,6 @@ struct ReceptionContext
 };
 
 bool receivedFrame(Frame &frame, ReceptionContext &context);
-
 void resetReceptionState(ReceptionContext &context);
-
-// bool isFrameValide(const Frame &frame, ReceptionContext &context);
-// bool isFrameInOrder(const Frame &frame, ReceptionContext &context);
 
 #endif

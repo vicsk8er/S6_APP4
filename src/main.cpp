@@ -4,9 +4,12 @@
 #include "tx_tasks.h"
 #include "protocol.h"
 #include "utils/frame_buffer.h"
-#include "manchester/manchester_driver.h"
+// #include "manchester/manchester_driver.h"
+#include "manchester/manchester_test.h"
+#include "manchester/manchester_config.h"
 
 #define BUTTON_PIN 0
+#define DEBUG_AUTO_SEND 0   // 0 = mode normal (UART), 1 = envoi automatique toutes les 2 s
 
 TaskHandle_t txTaskHandle = nullptr;
 volatile uint8_t buttonTrigger = 0;  // 0 = menu, 1 = button
@@ -34,7 +37,7 @@ void setup()
     
     initFrameBuffer();
 
-    manchesterBegin(MANCHESTER_RX_PIN, MANCHESTER_TX_PIN, MANCHESTER_BIT_RATE);
+    testManchesterBegin(MANCHESTER_RX_PIN, MANCHESTER_TX_PIN, MANCHESTER_BIT_RATE);
 
     //pinMode(BUTTON_PIN, INPUT_PULLDOWN);
 
@@ -79,11 +82,28 @@ void setup()
 
 void loop()
 {
+#if DEBUG_AUTO_SEND
+
+    static uint32_t lastSend = 0;
+
+    if (millis() - lastSend >= 2000)
+    {
+        lastSend = millis();
+
+        Serial.println("\n>>> Auto sending test message...\n");
+        const uint8_t testData[] = "Valid Data";
+        protocolSendMessage(testData, sizeof(testData) - 1, false);
+
+        buttonTrigger = 0;  // Indiquer que c'est le menu
+        xTaskNotifyGive(txTaskHandle);  // Trigger TX task
+    }
+
+#else
 
     if (Serial.available())
     {
         char cmd = Serial.read();
-        
+
         switch (cmd)
         {
             case 's':
@@ -92,19 +112,19 @@ void loop()
                 Serial.println("\n>>> Sending test message...\n");
                 const uint8_t testData[] = "Valid Data";
                 protocolSendMessage(testData, sizeof(testData) - 1, false);
-                buttonTrigger = 0;  // Indiquer que c'est le menu
-                xTaskNotifyGive(txTaskHandle);  // Trigger TX task
+                buttonTrigger = 0;
+                xTaskNotifyGive(txTaskHandle);
                 break;
             }
-            
+
             case 'e':
             case 'E':
             {
                 Serial.println("\n>>> Sending test message WITH error injection...\n");
                 const uint8_t testData[] = "testing error detection and NACK";
                 protocolSendMessage(testData, sizeof(testData) - 1, true);
-                buttonTrigger = 0;  // Indiquer que c'est le menu
-                xTaskNotifyGive(txTaskHandle);  // Trigger TX task
+                buttonTrigger = 0;
+                xTaskNotifyGive(txTaskHandle);
                 break;
             }
 
@@ -129,11 +149,13 @@ void loop()
                 performanceTest();
                 break;
             }
-            
+
             default:
                 break;
         }
     }
-    
-    vTaskDelay(100);
+
+#endif
+
+    vTaskDelay(pdMS_TO_TICKS(100));
 }

@@ -13,7 +13,7 @@ void uartRxTask(void *pvParameters)
 {
     (void)pvParameters;
 
-    Frame frame;
+    Frame frame = DEFAULT_FRAME;
 
     resetReceptionState(rxContext);
 
@@ -23,7 +23,7 @@ void uartRxTask(void *pvParameters)
         {
             continue;
         }
-        // printf("received frame\n");
+        printf("received frame\n");
         ProtocolResult result = processFrame(frame, rxContext);
         // printf("frame type = %d\n", (int8_t)result);
         switch (result)

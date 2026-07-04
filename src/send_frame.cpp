@@ -1,75 +1,61 @@
 #include "send_frame.h"
-#include "manchester/manchester_driver.h"
+// #include "manchester/manchester_driver.h"
+#include "manchester/manchester_test.h"
 #include "utils/CRC_calculator.h"
 #include "utils/error_injector.h"
 #include <cstring>
 
-
-// bool sendStartFrame(uint8_t nbOfFrame, bool inject_error)
+// bool sendFrame(const Frame &frame)
 // {
-//     current_frame_counter = 0;
-//     Frame frame = DEFAULT_FRAME;
-//     frame.heading.type = CommunicationType::Start;
-//     frame.heading.sequenceNumber = current_frame_counter;
-//     frame.heading.payloadLength = 0;
-//     frame.heading.parameter = nbOfFrame;
-//     frame.CRC = crc_calculator(frame);
-//     if(inject_error)
+//     if (frame.heading.payloadLength > MAX_PAYLOAD_BYTE_SIZE)
 //     {
-//         injectError(frame);
+//         return false;
 //     }
-//     return sendFrame(frame);
-// }
 
-// bool sendDataFrame(const uint8_t *data, uint8_t length, bool inject_error)
-// {
-//     Frame frame = DEFAULT_FRAME;
-//     frame.heading.type = CommunicationType::Data;
-//     frame.heading.sequenceNumber = current_frame_counter;
-//     frame.heading.payloadLength = length;
-//     frame.heading.parameter = 0;
-//     if (length > 0U)
-//     {
-//         memcpy(frame.payload, data, length);
+//     if (!manchesterSendBytes(&frame.preamble, 1U)) {
+//         printf("[SEND_FRAME] Failed to send preamble\n");
+//         return false;
 //     }
-//     frame.CRC = crc_calculator(frame);
-//     if(inject_error)
-//     {
-//         injectError(frame);
+//     if (!manchesterSendBytes(&frame.start, 1U)) {
+//         printf("[SEND_FRAME] Failed to send start delimiter\n");
+//         return false;
 //     }
-//     return sendFrame(frame);
+//     if (!manchesterSendBytes(&frame.heading.type, 1U)) {
+//         printf("[SEND_FRAME] Failed to send frame type\n");
+//         return false;
+//     }
+//     if (!manchesterSendBytes(&frame.heading.sequenceNumber, 1U)) {
+//         printf("[SEND_FRAME] Failed to send sequence number\n");
+//         return false;
+//     }
+//     if (!manchesterSendBytes(&frame.heading.payloadLength, 1U)) {
+//         printf("[SEND_FRAME] Failed to send payload length\n");
+//         return false;
+//     }
+//     if (!manchesterSendBytes(&frame.heading.parameter, 1U)) {
+//         printf("[SEND_FRAME] Failed to send parameter\n");
+//         return false;
+//     }
+//     if (!manchesterSendBytes(frame.payload, frame.heading.payloadLength)) {
+//         printf("[SEND_FRAME] Failed to send payload\n");
+//         return false;
+//     }
+//     const uint8_t crcLow = static_cast<uint8_t>(frame.CRC & 0xFFU);
+//     const uint8_t crcHigh = static_cast<uint8_t>((frame.CRC >> 8) & 0xFFU);
+//     if (!manchesterSendBytes(&crcLow, 1U)){
+//         printf("[SEND_FRAME] Failed to send CRC low\n");
+//         return false;
+//     }
+//     if (!manchesterSendBytes(&crcHigh, 1U)){
+//         printf("[SEND_FRAME] Failed to send CRC high\n");
+//         return false;
+//     }
+//     if (!manchesterSendBytes(&frame.end, 1U)){
+//         printf("[SEND_FRAME] Failed to send end delimiter\n");
+//         return false;
+//     }
+//     return true;
 // }
-
-// bool sendEndFrame(bool inject_error)
-// {
-//     Frame frame = DEFAULT_FRAME;
-//     frame.heading.type = CommunicationType::End;
-//     frame.heading.sequenceNumber = current_frame_counter;
-//     frame.heading.payloadLength = 0;
-//     frame.heading.parameter = 0;
-//     frame.CRC = crc_calculator(frame);
-//     if(inject_error)
-//     {
-//         injectError(frame);
-//     }
-//     return sendFrame(frame);
-// }
-
-// bool sendNackFrame(uint8_t nbOfFrame, bool inject_error)
-// {
-//     Frame frame = DEFAULT_FRAME;
-//     frame.heading.type = CommunicationType::Nack;
-//     frame.heading.sequenceNumber = 0U;
-//     frame.heading.payloadLength = 0U;
-//     frame.heading.parameter = nbOfFrame;
-//     frame.CRC = crc_calculator(frame);
-//     if (inject_error)
-//     {
-//         injectError(frame);
-//     }
-//     return sendFrame(frame);
-// }
-
 
 bool sendFrame(const Frame &frame)
 {
@@ -78,17 +64,55 @@ bool sendFrame(const Frame &frame)
         return false;
     }
 
-    if (!manchesterSendBytes(&frame.preamble, 1U)) return false;
-    if (!manchesterSendBytes(&frame.start, 1U)) return false;
-    if (!manchesterSendBytes(&frame.heading.type, 1U)) return false;
-    if (!manchesterSendBytes(&frame.heading.sequenceNumber, 1U)) return false;
-    if (!manchesterSendBytes(&frame.heading.payloadLength, 1U)) return false;
-    if (!manchesterSendBytes(&frame.heading.parameter, 1U)) return false;
-    if (!manchesterSendBytes(frame.payload, frame.heading.payloadLength)) return false;
+    if (!testManchesterSendBytes(&frame.preamble, 1U)) {
+        printf("[SEND_FRAME] Failed to send preamble\n");
+        return false;
+    }
+    if (!testManchesterSendBytes(&frame.start, 1U)) {
+        printf("[SEND_FRAME] Failed to send start delimiter\n");
+        return false;
+    }
+    if (!testManchesterSendBytes(&frame.heading.type, 1U)) {
+        printf("[SEND_FRAME] Failed to send frame type\n");
+        return false;
+    }
+    if (!testManchesterSendBytes(&frame.heading.sequenceNumber, 1U)) {
+        printf("[SEND_FRAME] Failed to send sequence number\n");
+        return false;
+    }
+    if (!testManchesterSendBytes(&frame.heading.payloadLength, 1U)) {
+        printf("[SEND_FRAME] Failed to send payload length\n");
+        return false;
+    }
+    if (!testManchesterSendBytes(&frame.heading.parameter, 1U)) {
+        printf("[SEND_FRAME] Failed to send parameter\n");
+        return false;
+    }
+    if (!testManchesterSendBytes(frame.payload, frame.heading.payloadLength)) {
+        printf("[SEND_FRAME] Failed to send payload\n");
+        return false;
+    }
     const uint8_t crcLow = static_cast<uint8_t>(frame.CRC & 0xFFU);
     const uint8_t crcHigh = static_cast<uint8_t>((frame.CRC >> 8) & 0xFFU);
-    if (!manchesterSendBytes(&crcLow, 1U)) return false;
-    if (!manchesterSendBytes(&crcHigh, 1U)) return false;
-    if (!manchesterSendBytes(&frame.end, 1U)) return false;
+    if (!testManchesterSendBytes(&crcLow, 1U)){
+        printf("[SEND_FRAME] Failed to send CRC low\n");
+        return false;
+    }
+    if (!testManchesterSendBytes(&crcHigh, 1U)){
+        printf("[SEND_FRAME] Failed to send CRC high\n");
+        return false;
+    }
+    if (!testManchesterSendBytes(&frame.end, 1U)){
+        printf("[SEND_FRAME] Failed to send end delimiter\n");
+        return false;
+    }
     return true;
+}
+
+bool sendDebug(){
+    uint8_t data[] = {0xAA, 0x55, 0xFF, 0x00};
+    if(testManchesterSendBytes(data, sizeof(data))){
+        return true;
+    }
+    return false;
 }

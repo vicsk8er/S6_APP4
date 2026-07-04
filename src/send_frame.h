@@ -5,6 +5,7 @@
 #include "utils/config.h"
 
 bool sendFrame(const Frame &frame);
+bool sendDebug();
 // bool sendStartFrame(uint8_t nbOfFrame, bool inject_error = false);
 // bool sendDataFrame(const uint8_t *data, uint8_t length, bool inject_error = false);
 // bool sendEndFrame(bool inject_error = false);

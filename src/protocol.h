@@ -3,6 +3,7 @@
 
 #include "utils/config.h"
 #include "receive_frame.h"
+#include <stdint.h>
 
 enum class ProtocolResult
 {
@@ -11,10 +12,16 @@ enum class ProtocolResult
     NACK
 };
 
-// bool isFrameValid(const Frame &frame, ReceptionContext &ctx);
-bool protocolSendMessage(const uint8_t* data, uint16_t length, bool inject_error); 
-bool protocolRetransmit(uint8_t sequence); // NACK
-ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx); // Réception
-void performanceTest(); // Throughput measurement
+// Main TX entry point
+bool protocolSendMessage(const uint8_t* data, uint16_t length, bool inject_error);
+
+// Retransmission on NACK request
+bool protocolRetransmit(uint8_t sequence);
+
+// RX processing (core logic)
+ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx);
+
+// Debug / test
+void performanceTest();
 
 #endif

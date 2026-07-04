@@ -29,7 +29,15 @@ static void transmitQueuedFrames()
 	Frame frame;
 	while (xQueueReceive(TxPendingQueue, &frame, 0) == pdTRUE)
 	{
-		sendFrame(frame);
+		bool frameSent = sendFrame(frame);
+		printf("[SEND_FRAME] Frame sent: type=%u seq=%u payloadLen=%u, succeed=%s\n", frame.heading.type,
+           frame.heading.sequenceNumber,
+           frame.heading.payloadLength,
+		   frameSent ? "SUCCESS" : "FAILURE");
+		vTaskDelay(pdMS_TO_TICKS(5));  // Petite pause pour éviter de saturer le bus
+
+		// bool debugSent = sendDebug();
+		// printf("[SEND_FRAME] Debug data sent: succeed=%s\n", debugSent ? "SUCCESS" : "FAILURE");
 	}
 }
 
