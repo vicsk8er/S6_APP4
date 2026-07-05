@@ -8,23 +8,7 @@
 #include "manchester/manchester_test.h"
 #include "manchester/manchester_config.h"
 
-#define BUTTON_PIN 0
 #define DEBUG_AUTO_SEND 0   // 0 = mode normal (UART), 1 = envoi automatique toutes les 2 s
-
-// TaskHandle_t txTaskHandle = nullptr;
-volatile uint8_t buttonTrigger = 0;  // 0 = menu, 1 = button
-
-void IRAM_ATTR buttonISR()
-{
-    BaseType_t higherPriorityTaskWoken = pdFALSE;
-    buttonTrigger = 1;  // Indiquer que c'est le bouton
-
-    vTaskNotifyGiveFromISR(
-        txTaskHandle,
-        &higherPriorityTaskWoken);
-
-    portYIELD_FROM_ISR(higherPriorityTaskWoken);
-}
 
 void setup()
 {
@@ -46,7 +30,7 @@ void setup()
         "MANCHESTER_RX",
         4096,
         nullptr,
-        2,
+        4,
         nullptr);
 
     xTaskCreate(
@@ -57,10 +41,6 @@ void setup()
         2,
         &txTaskHandle);
 
-    // attachInterrupt(
-    //     BUTTON_PIN,
-    //     buttonISR,
-    //     RISING);
 
     // Print menu
     Serial.println("\n\n========== NACK DEMONSTRATION TEST ==========");
@@ -94,7 +74,6 @@ void loop()
         const uint8_t testData[] = "Valid Data";
         protocolSendMessage(testData, sizeof(testData) - 1, false);
 
-        buttonTrigger = 0;  // Indiquer que c'est le menu
         xTaskNotifyGive(txTaskHandle);  // Trigger TX task
     }
 
@@ -112,7 +91,6 @@ void loop()
                 Serial.println("\n>>> Sending test message...\n");
                 const uint8_t testData[] = "Valid Data";
                 protocolSendMessage(testData, sizeof(testData) - 1, false);
-                buttonTrigger = 0;
                 xTaskNotifyGive(txTaskHandle);
                 break;
             }
@@ -123,7 +101,6 @@ void loop()
                 Serial.println("\n>>> Sending test message WITH error injection...\n");
                 const uint8_t testData[] = "testing error detection and NACK";
                 protocolSendMessage(testData, sizeof(testData) - 1, true);
-                buttonTrigger = 0;
                 xTaskNotifyGive(txTaskHandle);
                 break;
             }

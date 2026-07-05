@@ -69,7 +69,7 @@ bool receivedFrame(Frame &outFrame, ReceptionContext &context)
 
     while (getByte(byte))
     {
-        printf("RX byte : 0x%02X\n", byte); //NE PAS ENLEVER, sinon sa plante (a investiger)
+        // printf("RX byte : 0x%02X\n", byte); //NE PAS ENLEVER, sinon sa plante (a investiger)
         switch (state)
         {
             // ---------------------------------------------

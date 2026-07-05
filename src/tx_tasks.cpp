@@ -9,6 +9,7 @@ TaskHandle_t txTaskHandle = nullptr;
 
 void wakeTxTask()
 {
+	vTaskDelay(pdMS_TO_TICKS(5));  // Petite pause pour éviter de saturer le bus
 	xTaskNotifyGive(txTaskHandle);
 }
 
@@ -45,22 +46,13 @@ static void transmitQueuedFrames()
 	}
 }
 
-extern volatile uint8_t buttonTrigger;  // 0 = menu, 1 = button
-
 void uartTxTask(void *pvParameters)
 {
 	(void)pvParameters;
 
 	while (true)
 	{
-		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-		
-		// Appeler sendButtonMessage() seulement si c'est le bouton qui a déclenché
-		if (buttonTrigger == 1)
-		{
-			sendButtonMessage();
-		}
-		
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);		
 		transmitQueuedFrames();
 	}
 }

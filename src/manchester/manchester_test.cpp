@@ -63,93 +63,6 @@ static inline void testWriteBit(uint8_t bit)
     }
 }
 
-// static void testManchesterRxTask(void *)
-// {
-//     ManchesterEdgeEvent evt;
-
-//     bool waitingMidBit = false;
-
-//     while (true)
-//     {
-//         if (!xQueueReceive(rxEdgeQueue, &evt, portMAX_DELAY))
-//             continue;
-
-//         //--------------------------------------------------
-//         // transition espacée d'environ 1 bit
-//         //--------------------------------------------------
-
-//         if (evt.deltaUs > (halfBitUs * 1.5))
-//         {
-//             uint8_t bit = evt.rising ? 1 : 0;
-
-//             currentByte = (currentByte << 1) | bit;
-//             bitCount++;
-
-//             waitingMidBit = false;
-//         }
-
-//         //--------------------------------------------------
-//         // transition espacée d'un demi-bit
-//         //--------------------------------------------------
-
-//         else
-//         {
-//             if (!waitingMidBit)
-//             {
-//                 // transition de frontière
-//                 waitingMidBit = true;
-//                 continue;
-//             }
-
-//             // deuxième transition -> milieu du bit
-//             uint8_t bit = evt.rising ? 1 : 0;
-
-//             currentByte = (currentByte << 1) | bit;
-//             bitCount++;
-
-//             waitingMidBit = false;
-//         }
-
-//         //--------------------------------------------------
-
-//         if (bitCount == 8)
-//         {
-//             xQueueSend(rxByteQueue, &currentByte, 0);
-
-//             currentByte = 0;
-//             bitCount = 0;
-//         }
-//     }
-// }
-
-// void IRAM_ATTR testManchesterIsr()
-// {
-//     uint32_t now = micros();
-//     uint32_t delta = now - lastEdgeUs;
-//     lastEdgeUs = now;
-
-//     // élimine les glitches
-//     if (delta < (halfBitUs / 2)){ // équivalent a halfBitUs / 2
-//         return;
-//     }        
-
-//     ManchesterEdgeEvent evt;
-
-//     evt.deltaUs = delta;
-//     evt.rising = digitalRead(rxPin);
-//     // Après un front :
-//     // HIGH => front montant
-//     // LOW  => front descendant
-
-//     BaseType_t hpTaskWoken = pdFALSE;
-
-//     xQueueSendFromISR(rxEdgeQueue, &evt, &hpTaskWoken);
-
-//     if (hpTaskWoken)
-//         portYIELD_FROM_ISR();
-// }
-
-
 static void testManchesterRxTask(void *)
 {
     ManchesterEdgeEvent evt;
@@ -273,7 +186,7 @@ bool testManchesterBegin(uint8_t rx, uint8_t tx, uint32_t bitrate)
     "MANCHESTER_BIT_TASK",
     4096,
     nullptr,
-    6,
+    5,
     nullptr
     );
     Serial.println("[TEST MANCHESTER] init OK");
