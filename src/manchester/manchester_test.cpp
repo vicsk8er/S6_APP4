@@ -62,6 +62,7 @@ static inline void testWriteBit(uint8_t bit)
     }
 }
 
+
 static void testManchesterRxTask(void *)
 {
     ManchesterEdgeEvent evt;
@@ -77,6 +78,8 @@ static void testManchesterRxTask(void *)
         // transition espacée d'environ 1 bit
         //--------------------------------------------------
 
+        //CAS 1: environ 1 bit d'espacement entre les transitions
+        //
         if (evt.deltaUs > (MANCHESTER_HALF_BIT_US * 1.5))
         {
             uint8_t bit = evt.rising ? 1 : 0;
@@ -93,6 +96,7 @@ static void testManchesterRxTask(void *)
 
         else
         {
+            //frontière entre 2 bit
             if (!waitingMidBit)
             {
                 // transition de frontière
