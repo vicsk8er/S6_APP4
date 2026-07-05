@@ -291,6 +291,20 @@ bool protocolRetransmit(uint8_t sequence)
     vQueueDelete(tempQueue);
     return found;
 }
+bool flushTxHistory()
+{
+    if (TxHistoryQueue == nullptr)
+    {
+        return false;
+    }
+
+    Frame frame;
+    while (xQueueReceive(TxHistoryQueue, &frame, 0) == pdTRUE)
+    {
+        // Simply discard the frames
+    }
+    return true;
+}
 
 ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx)
 {

@@ -33,6 +33,11 @@ void uartRxTask(void *pvParameters)
                 {
                     storeFrame(frame);
                 }
+                else if(frame.heading.type == 0x03) // END frame
+                {
+                    // we have to flush the history queue once the END frame is received
+                    flushTxHistory();
+                }
                 break;
 
             case ProtocolResult::NACK:

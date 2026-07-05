@@ -24,5 +24,6 @@ ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx);
 // Debug / test
 void performanceTest();
 void sendNackFrame(uint8_t currentFrame);
+bool flushTxHistory();
 
 #endif
