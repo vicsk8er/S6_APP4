@@ -69,7 +69,7 @@ bool receivedFrame(Frame &outFrame, ReceptionContext &context)
 
     while (getByte(byte))
     {
-        // printf("RX byte : 0x%02X\n", byte);
+        printf("RX byte : 0x%02X\n", byte); //NE PAS ENLEVER, sinon sa plante (a investiger)
         switch (state)
         {
             // ---------------------------------------------
@@ -88,7 +88,7 @@ bool receivedFrame(Frame &outFrame, ReceptionContext &context)
             // ---------------------------------------------
                 if (byte == start_value)
                 {
-                    //printf("[RX] Start detected\n");
+                    // printf("[RX] Start detected\n");
                     frame.start = byte;
                     state = RxState::READ_HEADER;
                     headerIndex = 0;
@@ -106,11 +106,11 @@ bool receivedFrame(Frame &outFrame, ReceptionContext &context)
 
                 if (headerIndex >= sizeof(frame.heading))
                 {
-                    //printf("[RX] Header received: type=%u seq=%u payloadLen=%u param=%u\n",
-                    //     frame.heading.type,
-                    //     frame.heading.sequenceNumber,
-                    //     frame.heading.payloadLength,
-                    //     frame.heading.parameter);
+                    // printf("[RX] Header received: type=%u seq=%u payloadLen=%u param=%u\n",
+                        // frame.heading.type,
+                        // frame.heading.sequenceNumber,
+                        // frame.heading.payloadLength,
+                        // frame.heading.parameter);
                     payloadIndex = 0;
                     if(frame.heading.type == (uint8_t)CommunicationType::Data && frame.heading.payloadLength > 0)
                         state = RxState::READ_PAYLOAD;
@@ -137,7 +137,7 @@ bool receivedFrame(Frame &outFrame, ReceptionContext &context)
 
                 if (payloadIndex >= len)
                 {
-                    //printf("[RX] Payload received (%u bytes)\n", len);
+                    // printf("[RX] Payload received (%u bytes)\n", len);
                     state = RxState::READ_CRC_LOW;
                 }
                 break;
@@ -165,20 +165,9 @@ bool receivedFrame(Frame &outFrame, ReceptionContext &context)
                     break;
                 }
                 // printf("[RX] End detected\n");
-
-                frame.end = byte;
-
-                // =========================
-                // CRC CHECK
-                // =========================
-                if (crc_calculator(frame) != crc)
-                {
-                    printf("[RX] CRC error\n");
-                    context.error = ErrorCode::ERR_CRC;
-                    state = RxState::SEARCH_PREAMBLE;
-                    break;
-                }
                 frame.CRC = crc;
+                frame.end = byte;
+                
 
                 // =========================
                 // OUTPUT FRAME

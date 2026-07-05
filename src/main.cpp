@@ -11,7 +11,7 @@
 #define BUTTON_PIN 0
 #define DEBUG_AUTO_SEND 0   // 0 = mode normal (UART), 1 = envoi automatique toutes les 2 s
 
-TaskHandle_t txTaskHandle = nullptr;
+// TaskHandle_t txTaskHandle = nullptr;
 volatile uint8_t buttonTrigger = 0;  // 0 = menu, 1 = button
 
 void IRAM_ATTR buttonISR()

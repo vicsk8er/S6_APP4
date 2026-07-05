@@ -9,7 +9,8 @@
 
 void injectError(Frame &frame)// probléme avec les random ici
 {
-    frame.payload[0] ^= 0xFF;
+    // frame.payload[0] ^= 0xFF;
+    frame.CRC ^= 0xFFFF; // Inverser les bits du CRC pour simuler une erreur
     // if (frame.heading.payloadLength > 0U)
     // {
     //     uint8_t index = (uint8_t)random( 0U, (uint8_t)frame.heading.payloadLength);

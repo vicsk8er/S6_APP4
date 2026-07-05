@@ -2,6 +2,8 @@
 #include "utils/CRC_calculator.h"
 #include "utils/error_injector.h"
 #include "utils/frame_buffer.h"
+#include "send_frame.h"
+#include "tx_tasks.h"
 
 #include <Arduino.h>
 #include <cstring>
@@ -110,7 +112,7 @@ static Frame buildStartFrame(uint8_t totalFrames)
 
     Frame f = DEFAULT_FRAME;
     f.heading.type = CommunicationType::Start;
-    f.heading.sequenceNumber = 0;
+    f.heading.sequenceNumber = txSequence;
     f.heading.payloadLength = 0;
     f.heading.parameter = totalFrames;
 
@@ -125,7 +127,7 @@ static Frame buildDataFrame(const uint8_t* data, uint8_t len)
     Frame f = DEFAULT_FRAME;
 
     f.heading.type = CommunicationType::Data;
-    f.heading.sequenceNumber = txSequence++;
+    f.heading.sequenceNumber = txSequence;
     f.heading.payloadLength = len;
     f.heading.parameter = 0;
 
@@ -241,45 +243,52 @@ bool protocolSendMessage(const uint8_t* data, uint16_t length, bool inject_error
         enqueueTxFrame(f);
 
         offset += chunk;
+        ++txSequence;
     }
 
     enqueueTxFrame(buildEndFrame());
-
-    // printf("[PROTOCOL] TX queued\n");
     return true;
 }
 
 bool protocolRetransmit(uint8_t sequence)
 {
-    if (!TxHistoryQueue || !TxPendingQueue)
+    if (TxHistoryQueue == nullptr || TxPendingQueue == nullptr)
+    {
         return false;
+    }
 
-    QueueHandle_t temp = xQueueCreate(MAX_FRAMES, sizeof(Frame));
-    if (!temp)
+    QueueHandle_t tempQueue = xQueueCreate(MAX_FRAMES, sizeof(Frame));
+    if (tempQueue == nullptr)
+    {
         return false;
+    }
 
     bool found = false;
-    Frame f;
+    Frame frame = DEFAULT_FRAME;
 
-    while (xQueueReceive(TxHistoryQueue, &f, 0) == pdTRUE)
+    while (xQueueReceive(TxHistoryQueue, &frame, 0) == pdTRUE)
     {
-        if (!found && f.heading.sequenceNumber == sequence)
+        if (!found && frame.heading.sequenceNumber == sequence)
         {
             found = true;
-
-            f.CRC = crc_calculator(f);
-            xQueueSend(TxPendingQueue, &f, 0);
+            // Recalculate CRC for clean retransmission
+            frame.CRC = crc_calculator(frame);
+            xQueueSend(TxPendingQueue, &frame, 0);
+            xQueueSend(tempQueue, &frame, 0);
+            continue;
         }
 
-        xQueueSend(temp, &f, 0);
+        xQueueSend(tempQueue, &frame, 0);// on remet toutes les trames dans la queue temporaire pour restaurer l'historique
     }
 
-    while (xQueueReceive(temp, &f, 0) == pdTRUE)
+    while (xQueueReceive(tempQueue, &frame, 0) == pdTRUE)
     {
-        xQueueSend(TxHistoryQueue, &f, 0);
+        xQueueSend(TxHistoryQueue, &frame, 0);
     }
 
-    vQueueDelete(temp);
+    //il faut réveiller la tache Tx pour qu'elle reprenne l'envoi des trames dans la queue TxPendingQueue
+
+    vQueueDelete(tempQueue);
     return found;
 }
 
@@ -288,71 +297,138 @@ ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx)
     CommunicationType type = (CommunicationType)frame.heading.type;
 
     // CRC déjà validé par receive_frame → sécurité double check légère
-    if (frame.heading.payloadLength > MAX_PAYLOAD_BYTE_SIZE)
-        return ProtocolResult::REJECT;
+    ProtocolResult result = ProtocolResult::REJECT;
+    bool resetAfterLog = false;
 
-    switch (type)
+    if (!isFrameValid(frame, ctx))
     {
-        // =========================
-        case CommunicationType::Start:
-        // =========================
-            resetReceptionState(ctx);
+        printf("\n[RX ERROR] Invalid frame received!\n");
+        result =  ProtocolResult::REJECT;
+    }
+    else
+    {
+        switch (type)
+        {
+            // =========================
+            case CommunicationType::Start:
+            // =========================
+                 if (frame.heading.sequenceNumber != 0U)
+                {
+                    setError(ctx, ErrorCode::ERR_SEQUENCE);
+                    result = ProtocolResult::REJECT;
+                    break;
+                }
 
-            ctx.receptionStarted = true;
-            ctx.expectedTotal = frame.heading.parameter;
-            ctx.currentFrame = 1;
+                printf("\n========== RX INITIALIZATION ==========");
+                printf("\n[RX START] Session initialized");
+                printf("\n  Total packets expected: %u", frame.heading.parameter);
+                printf("\n  Next expected frame: 1");
+                printf("\n======================================\n");
 
-            printf("[PROTOCOL] START received (total=%u)\n", ctx.expectedTotal);
+                resetReceptionState(ctx);
+                ctx.receptionStarted = true;
+                ctx.expectedTotal = frame.heading.parameter;
+                ctx.currentFrame = 1U;
 
-            return ProtocolResult::ACCEPT;
+                result = ProtocolResult::ACCEPT;
+                break;
 
-        // =========================
-        case CommunicationType::Data:
-        // =========================
-            if (!ctx.receptionStarted)
-                return ProtocolResult::REJECT;
+            // =========================
+            case CommunicationType::Data:
+            // =========================
+                if (!ctx.receptionStarted)
+                {
+                    setError(ctx, ErrorCode::ERR_NOT_INITIALIZED);
+                    result = ProtocolResult::REJECT;
+                    break;
+                }
 
-            if (frame.heading.sequenceNumber != ctx.currentFrame)
+                if (frame.heading.sequenceNumber != ctx.currentFrame)
+                {
+                    // ERREUR DE SÉQUENCE - Génère un NACK
+                    printf("\n[RX ERROR] DATA frame sequence mismatch!\n");
+                    printf("  Expected: %u | Received: %u\n", ctx.currentFrame, frame.heading.sequenceNumber);
+                    printf("  -> Sending NACK for frame %u\n\n", ctx.currentFrame);
+                    
+                    setError(ctx, ErrorCode::ERR_SEQUENCE);
+                    result = ProtocolResult::NACK;
+                    break;
+                }
+
+                printf("[RX OK] DATA frame #%u accepted (payload: %u bytes)\n", 
+                    frame.heading.sequenceNumber, frame.heading.payloadLength);
+                
+                ctx.currentFrame++;
+                result = ProtocolResult::ACCEPT;
+                break;
+
+            // =========================
+            case CommunicationType::End:
+            // =========================
+                if (!ctx.receptionStarted)
+                {
+                    setError(ctx, ErrorCode::ERR_NOT_INITIALIZED);
+                    result = ProtocolResult::REJECT;
+                    break;
+                }
+
+                if (frame.heading.sequenceNumber != ctx.currentFrame)
+                {
+                    printf("\n[RX ERROR] END frame sequence mismatch!\n");
+                    setError(ctx, ErrorCode::ERR_SEQUENCE);
+                    result = ProtocolResult::NACK;
+                    break;
+                }
+
+                if (ctx.expectedTotal != 0U &&
+                    frame.heading.sequenceNumber != ctx.expectedTotal - 1U)
+                {
+                    setError(ctx, ErrorCode::ERR_UNEXPECTED_END);
+                    result = ProtocolResult::REJECT;
+                    break;
+                }
+                
+                ctx.currentFrame++;
+                result = ProtocolResult::ACCEPT;
+                resetAfterLog = true;
+                break;
+
+            // =========================
+            case CommunicationType::Nack:
+            // =========================
             {
-                printf("[PROTOCOL] SEQ ERROR expected=%u got=%u\n",
-                       ctx.currentFrame,
-                       frame.heading.sequenceNumber);
-
-                return ProtocolResult::NACK;
+                uint8_t packetToRetransmit = frame.heading.parameter;
+                
+                printf("\n[TX] NACK received - Retransmitting frame #%u\n", packetToRetransmit);
+                
+                if (protocolRetransmit(packetToRetransmit))
+                {                    
+                    printf("[TX OK] Frame #%u found in history and re-queued\n\n", packetToRetransmit);
+                    setError(ctx, ErrorCode::COMM_OK);
+                    result = ProtocolResult::ACCEPT;
+                    wakeTxTask(); // Wake up the TX task to process the retransmission
+                }
+                else
+                {
+                    printf("[TX ERROR] Frame #%u NOT found in history!\n\n", packetToRetransmit);
+                    setError(ctx, ErrorCode::ERR_VALUE_FIELD);
+                    result = ProtocolResult::REJECT;
+                }
+                break;
             }
 
-            ctx.currentFrame++;
-
-            return ProtocolResult::ACCEPT;
-
-        // =========================
-        case CommunicationType::End:
-        // =========================
-            if (!ctx.receptionStarted)
-                return ProtocolResult::REJECT;
-
-            printf("[PROTOCOL] END received\n");
-
-            resetReceptionState(ctx);
-
-            return ProtocolResult::ACCEPT;
-
-        // =========================
-        case CommunicationType::Nack:
-        // =========================
-        {
-            uint8_t seq = frame.heading.parameter;
-
-            printf("[PROTOCOL] NACK received for %u\n", seq);
-
-            bool ok = protocolRetransmit(seq);
-
-            return ok ? ProtocolResult::ACCEPT : ProtocolResult::REJECT;
+            default:
+                setError(ctx, ErrorCode::ERR_TYPE);
+                result = ProtocolResult::REJECT;
+                break;
         }
-
-        default:
-            return ProtocolResult::REJECT;
     }
+    if (resetAfterLog)
+    {
+        resetReceptionState(ctx);
+    } 
+
+    return result;
 }
 
 // ========== PERFORMANCE TEST ==========
@@ -439,3 +515,18 @@ void performanceTest()
     printf("\n=====================================\n\n");
 }
 
+
+void sendNackFrame(uint8_t currentFrame)
+{
+    Frame nackFrame;
+    nackFrame.preamble = 0x55;
+    nackFrame.start = 0x7E;
+    nackFrame.heading.type = 0x04;
+    nackFrame.heading.sequenceNumber = 0;  // ou txSequence 
+    nackFrame.heading.payloadLength = 0;
+    nackFrame.heading.parameter = currentFrame;  // Numéro du paquet à renvoyer
+    nackFrame.CRC = crc_calculator(nackFrame);
+    nackFrame.end = 0x7E;
+
+    sendFrame(nackFrame);
+}

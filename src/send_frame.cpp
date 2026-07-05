@@ -108,11 +108,3 @@ bool sendFrame(const Frame &frame)
     }
     return true;
 }
-
-bool sendDebug(){
-    uint8_t data[] = {0xAA, 0x55, 0xFF, 0x00};
-    if(testManchesterSendBytes(data, sizeof(data))){
-        return true;
-    }
-    return false;
-}

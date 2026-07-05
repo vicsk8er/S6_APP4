@@ -36,6 +36,7 @@ void uartRxTask(void *pvParameters)
                 break;
 
             case ProtocolResult::NACK:
+                printf("\n[RX] NACK sent for frame #%u\n", rxContext.currentFrame);
                 sendNackFrame(rxContext.currentFrame);
                 break;
 
@@ -46,17 +47,3 @@ void uartRxTask(void *pvParameters)
     }
 }
 
-void sendNackFrame(uint8_t currentFrame)
-{
-    Frame nackFrame;
-    nackFrame.preamble = 0x55;
-    nackFrame.start = 0x7E;
-    nackFrame.heading.type = 0x04;
-    nackFrame.heading.sequenceNumber = 0;  
-    nackFrame.heading.payloadLength = 0;
-    nackFrame.heading.parameter = currentFrame;  // Numéro du paquet à renvoyer
-    nackFrame.CRC = crc_calculator(nackFrame);
-    nackFrame.end = 0x7E;
-
-    sendFrame(nackFrame);
-}
