@@ -206,11 +206,19 @@ bool protocolSendMessage(const uint8_t* data, uint16_t length, bool inject_error
 
     uint8_t totalFrames = totalDataFrames + 2;
 
-    printf("\n[PROTOCOL] TX start (%u frames)\n", totalFrames);
+    printf("\n========== TX START ==========\n");
+    printf("Sending %u packets total:\n", totalFrames);
+    printf("  1x START\n  %u x DATA\n  1x END\n", totalFrames - 2);
+    if (inject_error)
+    {
+        printf("  [ERROR INJECTION ENABLED]\n");
+    }
+    printf("============================\n\n");
 
     enqueueTxFrame(buildStartFrame(totalFrames));
 
     uint16_t offset = 0;
+    bool injected = false;
 
     while (offset < length)
     {
@@ -218,10 +226,17 @@ bool protocolSendMessage(const uint8_t* data, uint16_t length, bool inject_error
 
         Frame f = buildDataFrame(&data[offset], chunk);
 
-        if (inject_error && offset == 0)
+        bool mustInject = inject_error && !injected;
+        if (mustInject)
         {
+            printf("[TX DATA #%u] Sending with ERROR INJECTION (corrupted CRC)\n", txSequence);
             injectError(f);
         }
+        else
+        {
+            printf("[TX DATA #%u] Sending %u bytes (normal)\n", txSequence, chunk);
+        }
+        injected = injected || mustInject;        
 
         enqueueTxFrame(f);
 
@@ -230,7 +245,7 @@ bool protocolSendMessage(const uint8_t* data, uint16_t length, bool inject_error
 
     enqueueTxFrame(buildEndFrame());
 
-    printf("[PROTOCOL] TX queued\n");
+    // printf("[PROTOCOL] TX queued\n");
     return true;
 }
 
@@ -424,54 +439,3 @@ void performanceTest()
     printf("\n=====================================\n\n");
 }
 
-
-
-
-
-
-
-// ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx)
-// {
-//     if (!isFrameValid(frame, ctx))
-//         return ProtocolResult::REJECT;
-
-//     CommunicationType type = (CommunicationType)frame.heading.type;
-
-//     switch (type)
-//     {
-//         case CommunicationType::Start:
-//             if (frame.heading.sequenceNumber != 0)
-//                 return ProtocolResult::REJECT;
-
-//             resetReceptionState(ctx);
-//             ctx.receptionStarted = true;
-//             ctx.expectedTotal = frame.heading.parameter;
-//             ctx.currentFrame = 1;
-
-//             return ProtocolResult::ACCEPT;
-
-//         case CommunicationType::Data:
-//             if (!ctx.receptionStarted)
-//                 return ProtocolResult::REJECT;
-
-//             if (frame.heading.sequenceNumber != ctx.currentFrame)
-//                 return ProtocolResult::NACK;
-
-//             ctx.currentFrame++;
-//             return ProtocolResult::ACCEPT;
-
-//         case CommunicationType::End:
-//             if (!ctx.receptionStarted)
-//                 return ProtocolResult::REJECT;
-
-//             if (frame.heading.sequenceNumber != ctx.currentFrame)
-//                 return ProtocolResult::NACK;
-
-//             resetReceptionState(ctx);
-//             return ProtocolResult::ACCEPT;
-
-//         case CommunicationType::Nack:
-//         default:
-//             return ProtocolResult::REJECT;
-//     }
-// }

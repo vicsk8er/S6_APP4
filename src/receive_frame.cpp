@@ -69,7 +69,7 @@ bool receivedFrame(Frame &outFrame, ReceptionContext &context)
 
     while (getByte(byte))
     {
-        printf("RX byte : 0x%02X\n", byte);
+        // printf("RX byte : 0x%02X\n", byte);
         switch (state)
         {
             // ---------------------------------------------
@@ -77,7 +77,7 @@ bool receivedFrame(Frame &outFrame, ReceptionContext &context)
             // ---------------------------------------------
                 if (byte == preamble_value)
                 {
-                    printf("[RX] Preamble detected\n");
+                    // printf("[RX] Preamble detected\n");
                     frame.preamble = byte;
                     state = RxState::SEARCH_START;
                 }
@@ -164,7 +164,7 @@ bool receivedFrame(Frame &outFrame, ReceptionContext &context)
                     context.error = ErrorCode::ERR_VALUE_FIELD;
                     break;
                 }
-                printf("[RX] End detected\n");
+                // printf("[RX] End detected\n");
 
                 frame.end = byte;
 
