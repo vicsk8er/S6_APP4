@@ -5,8 +5,12 @@
 
 static constexpr uint8_t MANCHESTER_RX_PIN = 12U;
 static constexpr uint8_t MANCHESTER_TX_PIN = 14U;
-static constexpr uint32_t MANCHESTER_BIT_RATE = 3000U; //MAX bit rate
+static constexpr uint32_t MANCHESTER_BIT_RATE = 2500U; //MAX bit rate
 static constexpr uint32_t MANCHESTER_HALF_BIT_US = (1000000UL / MANCHESTER_BIT_RATE) / 2UL;
 static constexpr uint32_t MANCHESTER_QUARTER_BIT_US = MANCHESTER_HALF_BIT_US / 2UL;
+static constexpr uint32_t MANCHESTER_DELAY_BETWEEN_FRAMES_MS = 5UL; // s ms delay between frames
+static constexpr uint32_t MANCHESTER_DELAY_BETWEEN_FRAMES_US = MANCHESTER_DELAY_BETWEEN_FRAMES_MS * 1000UL; // s ms delay between frames
+static constexpr uint32_t MANCHESTER_TOLERANCE_DELAY_BETWEEN_FRAMES_US = MANCHESTER_DELAY_BETWEEN_FRAMES_US * 0.1;
 
+static constexpr uint32_t MANCHESTER_DELAY_WITH_TOLERANCE_BETWEEN_FRAME_US = MANCHESTER_DELAY_BETWEEN_FRAMES_US - MANCHESTER_TOLERANCE_DELAY_BETWEEN_FRAMES_US;
 #endif

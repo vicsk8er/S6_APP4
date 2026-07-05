@@ -126,6 +126,7 @@ static void testManchesterRxTask(void *)
     }
 }
 
+
 void IRAM_ATTR testManchesterIsr()
 {
     uint32_t now = micros();
@@ -136,14 +137,14 @@ void IRAM_ATTR testManchesterIsr()
         return;
 
     // détection début de trame
-    if (delta >= 4500) // 4.5ms
+    if (delta >= ( MANCHESTER_DELAY_WITH_TOLERANCE_BETWEEN_FRAME_US))
     {
         firstByteOfFrame = true;
     }
 
     ManchesterEdgeEvent evt;
     evt.deltaUs = delta;
-    evt.rising = digitalRead(rxPin);
+    evt.rising = gpio_get_level((gpio_num_t)rxPin);
 
     BaseType_t hpTaskWoken = pdFALSE;
     xQueueSendFromISR(rxEdgeQueue, &evt, &hpTaskWoken);

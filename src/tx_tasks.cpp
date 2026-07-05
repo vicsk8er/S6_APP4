@@ -2,6 +2,7 @@
 #include "protocol.h"
 #include "send_frame.h"
 #include "utils/frame_buffer.h"
+#include "manchester/manchester_config.h"
 #include <cstring>
 #include <stdio.h>
 
@@ -9,7 +10,7 @@ TaskHandle_t txTaskHandle = nullptr;
 
 void wakeTxTask()
 {
-	vTaskDelay(pdMS_TO_TICKS(5));  // Petite pause pour éviter de saturer le bus
+	vTaskDelay(pdMS_TO_TICKS(MANCHESTER_DELAY_BETWEEN_FRAMES_MS));  // Petite pause pour éviter de saturer le bus
 	xTaskNotifyGive(txTaskHandle);
 }
 
@@ -42,7 +43,7 @@ static void transmitQueuedFrames()
            frame.heading.sequenceNumber,
            frame.heading.payloadLength,
 		   frameSent ? "SUCCESS" : "FAILURE");
-		vTaskDelay(pdMS_TO_TICKS(5));  // Petite pause pour éviter de saturer le bus
+		vTaskDelay(pdMS_TO_TICKS(MANCHESTER_DELAY_BETWEEN_FRAMES_MS));  // Petite pause pour éviter de saturer le bus
 	}
 }
 
