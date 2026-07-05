@@ -46,6 +46,7 @@ void setup()
     Serial.println("\n\n========== NACK DEMONSTRATION TEST ==========");
     Serial.println("Commands:");
     Serial.println("  's' - Send NORMAL test message (no error)");
+    Serial.println("  'a' - Send a message over 80 bytes (no error)");
     Serial.println("  'e' - Send with ERROR INJECTION (triggers NACK)");
     Serial.println("  'd' - Display received DATA frames with timestamps");
     Serial.println("  'c' - Clear received frames queue");
@@ -94,7 +95,15 @@ void loop()
                 xTaskNotifyGive(txTaskHandle);
                 break;
             }
-
+            case 'a':
+            case 'A':
+            {
+                Serial.println("\n>>> Sending a message over 80 bytes\n");
+                const uint8_t testData[] = "Trusss, voici un message de test qui dépasse 80 octets pour vérifier la segmentation en plusieurs trames DATA et la gestion correcte de l'envoi et de la réception sur l'ESP32. Ce message est volontairement long pour tester le protocole.";
+                protocolSendMessage(testData, sizeof(testData) - 1, false);
+                xTaskNotifyGive(txTaskHandle);
+                break;
+            }
             case 'e':
             case 'E':
             {
