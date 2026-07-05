@@ -11,7 +11,6 @@
 static uint8_t rxPin = 0;
 static uint8_t txPin = 0;
 
-static uint32_t halfBitUs = 0;
 
 static bool driverStarted = false;
 
@@ -48,18 +47,18 @@ static inline void testWriteBit(uint8_t bit)
     if (bit == 0)
     {
         digitalWrite(txPin, HIGH);
-        delayMicroseconds(halfBitUs);
+        delayMicroseconds(MANCHESTER_HALF_BIT_US);
 
         digitalWrite(txPin, LOW);
-        delayMicroseconds(halfBitUs);
+        delayMicroseconds(MANCHESTER_HALF_BIT_US);
     }
     else
     {
         digitalWrite(txPin, LOW);
-        delayMicroseconds(halfBitUs);
+        delayMicroseconds(MANCHESTER_HALF_BIT_US);
 
         digitalWrite(txPin, HIGH);
-        delayMicroseconds(halfBitUs);
+        delayMicroseconds(MANCHESTER_HALF_BIT_US);
     }
 }
 
@@ -78,7 +77,7 @@ static void testManchesterRxTask(void *)
         // transition espacée d'environ 1 bit
         //--------------------------------------------------
 
-        if (evt.deltaUs > (halfBitUs * 1.5))
+        if (evt.deltaUs > (MANCHESTER_HALF_BIT_US * 1.5))
         {
             uint8_t bit = evt.rising ? 1 : 0;
 
@@ -133,7 +132,7 @@ void IRAM_ATTR testManchesterIsr()
     uint32_t delta = now - lastEdgeUs;
     lastEdgeUs = now;
 
-    if (delta < (halfBitUs / 2))
+    if (delta < (MANCHESTER_QUARTER_BIT_US))
         return;
 
     // détection début de trame
@@ -165,15 +164,14 @@ bool testManchesterBegin(uint8_t rx, uint8_t tx, uint32_t bitrate)
     if (bitrate == 0)
         bitrate = MANCHESTER_BIT_RATE;
 
-    halfBitUs = (1000000UL / bitrate) / 2;
 
     pinMode(rxPin, INPUT);
     pinMode(txPin, OUTPUT);
 
     digitalWrite(txPin, LOW);
 
-    rxEdgeQueue = xQueueCreate(256, sizeof(ManchesterEdgeEvent));
-    rxByteQueue = xQueueCreate(256, sizeof(uint8_t));
+    rxEdgeQueue = xQueueCreate(512, sizeof(ManchesterEdgeEvent));
+    rxByteQueue = xQueueCreate(512, sizeof(uint8_t));
     if (!rxEdgeQueue || !rxByteQueue)
         return false;
 
@@ -190,7 +188,7 @@ bool testManchesterBegin(uint8_t rx, uint8_t tx, uint32_t bitrate)
     nullptr
     );
     Serial.println("[TEST MANCHESTER] init OK");
-    Serial.printf("halfBitUs = %lu us\n", halfBitUs);
+    Serial.printf("halfBitUs = %lu us\n", MANCHESTER_HALF_BIT_US);
 
     return true;
 }

@@ -333,11 +333,11 @@ ProtocolResult processFrame(const Frame &frame, ReceptionContext &ctx)
                     break;
                 }
 
-                printf("\n========== RX INITIALIZATION ==========");
-                printf("\n[RX START] Session initialized");
-                printf("\n  Total packets expected: %u", frame.heading.parameter);
-                printf("\n  Next expected frame: 1");
-                printf("\n======================================\n");
+                // printf("\n========== RX INITIALIZATION ==========");
+                // printf("\n[RX START] Session initialized");
+                // printf("\n  Total packets expected: %u", frame.heading.parameter);
+                // printf("\n  Next expected frame: 1");
+                // printf("\n======================================\n");
 
                 resetReceptionState(ctx);
                 ctx.receptionStarted = true;
