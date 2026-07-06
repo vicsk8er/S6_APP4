@@ -20,7 +20,7 @@ extern QueueHandle_t TxPendingQueue; //contient les trames qui attende d'être e
 
 void initFrameBuffer();
 
-bool storeFrame(const Frame &frame);
+bool storeFrame(const Frame &frame, uint32_t timestamp);
 
 bool getFrame(Frame &frame);
 

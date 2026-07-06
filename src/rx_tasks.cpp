@@ -4,6 +4,7 @@
 #include "receive_frame.h"
 #include "send_frame.h"
 #include "utils/frame_buffer.h"
+#include "utils/timer.h"
 #include <stdio.h>
 
 static ReceptionContext rxContext;
@@ -18,10 +19,12 @@ void uartRxTask(void *pvParameters)
 
     while (true)
     {
-        if (!receivedFrame(frame, rxContext))
+        bool successReceivedFrame = receivedFrame(frame, rxContext);
+        if (!successReceivedFrame)
         {
             continue;
         }
+        stopTimer(frame.heading.sequenceNumber);
         printf("received frame\n");
         ProtocolResult result = processFrame(frame, rxContext);
         // printf("frame type = %d\n", (int8_t)result);
@@ -31,7 +34,7 @@ void uartRxTask(void *pvParameters)
                 // Store only DATA frames, not START/END/NACK
                 if (frame.heading.type == 0x02)  // DATA frame
                 {
-                    storeFrame(frame);
+                    storeFrame(frame, getElapsedTime(frame.heading.sequenceNumber));
                 }
                 else if(frame.heading.type == 0x03) // END frame
                 {

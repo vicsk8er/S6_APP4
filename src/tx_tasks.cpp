@@ -5,6 +5,7 @@
 #include "manchester/manchester_config.h"
 #include <cstring>
 #include <stdio.h>
+#include "utils/timer.h"
 
 TaskHandle_t txTaskHandle = nullptr;
 
@@ -38,7 +39,13 @@ static void transmitQueuedFrames()
 	Frame frame;
 	while (xQueueReceive(TxPendingQueue, &frame, 0) == pdTRUE)
 	{
+		if(frame.heading.type == (uint8_t)CommunicationType::Start){
+			clearAllTimers();
+		}
+		
+		startTimer(static_cast<CommunicationType>(frame.heading.type), frame.heading.sequenceNumber);
 		bool frameSent = sendFrame(frame);
+		
 		printf("[SEND_FRAME] Frame sent: type=%u seq=%u payloadLen=%u, transmission status=%s\n", frame.heading.type,
            frame.heading.sequenceNumber,
            frame.heading.payloadLength,

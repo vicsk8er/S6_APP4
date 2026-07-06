@@ -7,6 +7,7 @@
 // #include "manchester/manchester_driver.h"
 #include "manchester/manchester_test.h"
 #include "manchester/manchester_config.h"
+#include "utils/timer.h"
 
 #define DEBUG_AUTO_SEND 0   // 0 = mode normal (UART), 1 = envoi automatique toutes les 2 s
 
@@ -20,10 +21,9 @@ void setup()
     Serial.println("\n=== ESP32 Loopback Test ===\n");
     
     initFrameBuffer();
+    initTimers();
 
     testManchesterBegin(MANCHESTER_RX_PIN, MANCHESTER_TX_PIN, MANCHESTER_BIT_RATE);
-
-    //pinMode(BUTTON_PIN, INPUT_PULLDOWN);
 
     xTaskCreate(
         uartRxTask,

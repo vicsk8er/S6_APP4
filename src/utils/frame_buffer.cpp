@@ -17,11 +17,11 @@ void initFrameBuffer()
     frameCounter = 0;
 }
 
-bool storeFrame(const Frame &frame)
+bool storeFrame(const Frame &frame, uint32_t timestamp)
 {
     FrameWithMetadata frameData;
     frameData.frame = frame;
-    frameData.timestamp = time(nullptr);  // Unix timestamp avec secondes
+    frameData.timestamp = timestamp;  // Unix timestamp avec secondes
     frameData.frameNumber = frameCounter++;
     
     if (xQueueSend(RxFrameQueue, &frameData, 0) != pdTRUE)
