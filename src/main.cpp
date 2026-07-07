@@ -50,7 +50,6 @@ void setup()
     Serial.println("  'e' - Send with ERROR INJECTION (triggers NACK)");
     Serial.println("  'd' - Display received DATA frames with timestamps");
     Serial.println("  'c' - Clear received frames queue");
-    Serial.println("  'p' - Performance test (measure max throughput)");
     Serial.println("\nExpected NACK demo flow (with 'e'):");
     Serial.println("  1) TX sends START frame with total packets");
     Serial.println("  2) TX sends first DATA frame WITH ERROR (bad CRC)");
@@ -90,7 +89,7 @@ void loop()
             case 'S':
             {
                 Serial.println("\n>>> Sending test message...\n");
-                const uint8_t testData[] = "Valid Data";
+                const uint8_t testData[] = "valide data";
                 protocolSendMessage(testData, sizeof(testData) - 1, false);
                 xTaskNotifyGive(txTaskHandle);
                 break;
@@ -125,14 +124,6 @@ void loop()
             case 'C':
             {
                 clearRxQueue();
-                break;
-            }
-
-            case 'p':
-            case 'P':
-            {
-                Serial.println("\n>>> Starting performance test...");
-                performanceTest();
                 break;
             }
 
